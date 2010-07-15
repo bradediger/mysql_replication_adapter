@@ -5,7 +5,8 @@ module ActiveRecord
   class Base
     class << self
       
-      # Establishes a connection to the database that's used by all Active Record objects.
+      # Establishes a connection to the database that's used by all Active
+      # Record objects.
       def mysql_replication_connection(config) # :nodoc:
         config = config.symbolize_keys
         host     = config[:host]
@@ -17,7 +18,8 @@ module ActiveRecord
         if config.has_key?(:database)
           database = config[:database]
         else
-          raise ArgumentError, "No database specified. Missing argument: database."
+          raise ArgumentError, "No database specified. Missing argument: " +
+            "database."
         end
 
         # Require the MySQL driver and define Mysql::Result.all_hashes
@@ -25,20 +27,25 @@ module ActiveRecord
           begin
             require_library_or_gem('mysql')
           rescue LoadError
-            $stderr.puts '!!! The bundled mysql.rb driver has been removed from Rails 2.2. Please install the mysql gem and try again: gem install mysql.'
+            $stderr.puts "!!! The bundled mysql.rb driver has been removed " +
+              "from Rails 2.2. Please install the mysql gem and try again: " +
+              "gem install mysql."
             raise
           end
         end
         MysqlCompat.define_all_hashes_method!
 
         mysql = Mysql.init
-        mysql.ssl_set(config[:sslkey], config[:sslcert], config[:sslca], config[:sslcapath], config[:sslcipher]) if config[:sslca] || config[:sslkey]
+        mysql.ssl_set(config[:sslkey], config[:sslcert], config[:sslca],
+          config[:sslcapath], config[:sslcipher]) if config[:sslca] || 
+                                                     config[:sslkey]
 
-        ConnectionAdapters::MysqlReplicationAdapter.new(mysql, logger, [host, username, password, database, port, socket], config)
+        ConnectionAdapters::MysqlReplicationAdapter.new(mysql, logger, 
+          [host, username, password, database, port, socket], config)
       end
 
       def slave_valid(use_slave = nil)
-#        logger.debug("checking conn.  use_slave? #{use_slave} in trans? #{Thread.current['open_transactions']}") if logger && logger.debug
+      # logger.debug("checking conn.  use_slave? #{use_slave} in trans? #{Thread.current['open_transactions']}") if logger && logger.debug
         use_slave && 
           connection.is_a?(ConnectionAdapters::MysqlReplicationAdapter) && 
           (Thread.current['open_transactions'] || 0) == 0
@@ -51,8 +58,8 @@ module ActiveRecord
       end
 
       alias_method :old_find_every, :find_every
-      # Override the standard find to check for the :use_slave option. When specified, the
-      # resulting query will be sent to a slave machine.
+      # Override the standard find to check for the :use_slave option. When
+      # specified, the resulting query will be sent to a slave machine.
       def find_every(options)
         if slave_valid(options[:use_slave]) 
           connection.load_balance_query { old_find_every(options) }
@@ -62,7 +69,8 @@ module ActiveRecord
       end
       
       alias_method :old_find_by_sql, :find_by_sql
-      # Override find_by_sql so that you can tell it to selectively use a slave machine
+      # Override find_by_sql so that you can tell it to selectively use a slave
+      # machine
       def find_by_sql(sql, use_slave = false)
         use_slave = get_use_slave(use_slave)
         if slave_valid(use_slave)
@@ -87,7 +95,9 @@ module ActiveRecord
       def calculate(operation, column_name, options ={})
         use_slave = options.delete(:use_slave)
         if slave_valid(use_slave)
-          connection.load_balance_query { old_calculate(operation, column_name, options) }
+          connection.load_balance_query { 
+            old_calculate(operation, column_name, options)
+          }
         else
           old_calculate(operation, column_name, options)
         end
