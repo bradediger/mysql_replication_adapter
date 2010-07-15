@@ -52,7 +52,7 @@ module ActiveRecord
       end
 
       def get_use_slave(arg)
-        if arg && arg.is_a?(Hash) then return arg[:use_slave]
+        if arg && arg.is_a?(Hash) then return arg.delete(:use_slave){ true }
         else return arg
         end
       end
@@ -61,7 +61,8 @@ module ActiveRecord
       # Override the standard find to check for the :use_slave option. When
       # specified, the resulting query will be sent to a slave machine.
       def find_every(options)
-        if slave_valid(options[:use_slave]) 
+        use_slave = options.delete(:use_slave) { true }
+        if slave_valid(use_slave) 
           connection.load_balance_query { old_find_every(options) }
         else
           old_find_every(options)
@@ -71,7 +72,7 @@ module ActiveRecord
       alias_method :old_find_by_sql, :find_by_sql
       # Override find_by_sql so that you can tell it to selectively use a slave
       # machine
-      def find_by_sql(sql, use_slave = false)
+      def find_by_sql(sql, use_slave = true)
         use_slave = get_use_slave(use_slave)
         if slave_valid(use_slave)
           connection.load_balance_query { old_find_by_sql sql }
@@ -81,7 +82,7 @@ module ActiveRecord
       end
 
       alias_method :old_count_by_sql, :count_by_sql
-      def count_by_sql(sql, use_slave = false)
+      def count_by_sql(sql, use_slave = true)
         use_slave = get_use_slave(use_slave)
         if slave_valid(use_slave)
           connection.load_balance_query { old_count_by_sql sql }
@@ -93,7 +94,7 @@ module ActiveRecord
       
       alias_method :old_calculate, :calculate
       def calculate(operation, column_name, options ={})
-        use_slave = options.delete(:use_slave)
+        use_slave = options.delete(:use_slave) { true }
         if slave_valid(use_slave)
           connection.load_balance_query { 
             old_calculate(operation, column_name, options)
